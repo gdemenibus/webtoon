@@ -13,4 +13,7 @@ pub enum WebtoonSpiderError {
 
     #[error("No image list")]
     NoImageList,
+
+    #[error("No episode list")]
+    NoEpisodeList,
 }
