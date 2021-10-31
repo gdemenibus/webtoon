@@ -1,11 +1,12 @@
 use bytes::Bytes;
 
-use html5ever::{LocalName, QualName, parse_document, tendril::{Tendril, TendrilSink, fmt::UTF8}};
+use html5ever::{tendril::Tendril, LocalName, QualName};
 use markup5ever_rcdom::{Handle, NodeData, RcDom};
 use reqwest::{self, header, Client};
 
 use crate::{
     error::{Result, WebtoonSpiderError},
+    html::{parse_html, walker},
     BASE_URL, COOKIE_PREFIX,
 };
 
@@ -25,45 +26,18 @@ async fn get_html(client: &Client, title_no: usize, episode_no: usize) -> Result
         .await?)
 }
 
-fn parse_html(bytes: &Bytes) -> Result<RcDom> {
-    Ok(
-        parse_document(RcDom::default(), html5ever::ParseOpts::default())
-            .from_utf8()
-            .read_from(&mut &**bytes)?,
-    )
-}
-
-
 fn find_image_list(dom: &RcDom) -> Option<Vec<Handle>> {
     let qual_id = QualName::new(None, ns!(), local_name!("id"));
     let qual_val = Tendril::from("_imageList");
 
-    fn walker(handle: &Handle, qual_id: &QualName, qual_val: &Tendril<UTF8>) -> Option<Handle> {
-        let node = handle;
-    
-    
-        if let NodeData::Element { attrs, .. } = &node.data {
-            if attrs
-                .borrow()
-                .iter()
-                .any(|a| &a.name == qual_id && &a.value == qual_val)
-            {
-                return Some(node.clone());
-            };
-        }
-    
-        for i in node.children.borrow().iter() {
-            let recursive = walker(i, qual_id, qual_val);
-            if recursive.is_some() {
-                return recursive;
-            }
-        }
-    
-        None
-    }
-    
-    // TODO: Can this be neater?
-    walker(&dom.document, &qual_id, &qual_val).map(|a| a.children.clone().into_inner())
+    walker(&dom.document, |data| match data {
+        NodeData::Element { attrs, .. } => attrs
+            .borrow()
+            .iter()
+            .any(|a| a.name == qual_id && a.value == qual_val),
+        _ => false,
+    })
+    .map(|a| a.children.clone().into_inner())
 }
 
 fn to_image_urls(handle: &[Handle]) -> Vec<String> {
@@ -95,6 +69,6 @@ pub async fn fetch_urls_of_episode(
     let dom = parse_html(&html)?;
     let nodes = find_image_list(&dom).ok_or(WebtoonSpiderError::NoImageList)?;
     let images = to_image_urls(&nodes);
-    
+
     Ok(images)
 }
