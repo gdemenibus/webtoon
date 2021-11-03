@@ -38,7 +38,7 @@ fn find_episode_list(dom: &RcDom) -> Option<Handle> {
     })
 }
 
-fn find_latest_episode(list: Handle) -> Option<usize> {
+fn find_latest_episode(list: &Handle) -> Option<usize> {
     let qual_li = QualName::new(None, ns!(html), local_name!("li"));
     let qual_data_episode = QualName::new(None, ns!(), LocalName::from("data-episode-no"));
 
@@ -61,6 +61,6 @@ pub async fn get_latest_episode_number(client: &Client, title_no: usize) -> Resu
     let html = get_html(client, title_no).await?;
     let dom = parse_html(&html)?;
     let list = find_episode_list(&dom).ok_or(WebtoonSpiderError::NoEpisodeList)?;
-    let no = find_latest_episode(list).unwrap();
+    let no = find_latest_episode(&list).unwrap();
     Ok(no)
 }
