@@ -12,5 +12,8 @@ pub enum WebtoonSpiderError {
     IoError(#[from] io::Error),
 
     #[error("No image list")]
-    NoImageList
+    NoImageList,
+
+    #[error("No episode list")]
+    NoEpisodeList,
 }
