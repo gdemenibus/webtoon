@@ -17,3 +17,12 @@ pub enum WebtoonSpiderError {
     #[error("No episode list")]
     NoEpisodeList,
 }
+
+#[derive(Error, Debug)]
+pub enum UrlExtractError {
+    #[error("Invalid URL")]
+    InvalidUrl,
+
+    #[error("Invalid Episode Number")]
+    InvalidEpisodeNumber(#[from] std::num::ParseIntError)
+}

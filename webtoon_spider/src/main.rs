@@ -6,6 +6,7 @@ mod error;
 mod html;
 mod title;
 mod download;
+mod url_extractor;
 
 use error::Result;
 use reqwest::Client;
@@ -25,7 +26,7 @@ async fn main() {
 }
 
 async fn fetch_comic(client: &Client, title_no: usize, from_episode: Option<usize>) -> Result<Vec<Vec<String>>> {
-    let latest = title::get_latest_episode_number(client, 2616).await?;
+    let latest = title::get_latest_episode_number(client, title_no).await?;
 
     let mut images = Vec::with_capacity(latest);
 
