@@ -7,23 +7,35 @@ pub struct Webtoon {
     pub genre: String,
 }
 
-fn extract_url(url: &str) -> Result<Webtoon, error::UrlExtractError> {
-    if !url.contains("list") {
-        return Err(UrlExtractError::InvalidUrl);
-    }
+pub fn extract_url(url: &str) -> Result<Webtoon, error::UrlExtractError> {
+    let mut split = url.split('/').rev();
 
-    let mut split: Vec<&str> = url.split('/').collect();
-    split.reverse();
+    let title_no: usize = if url.contains("viewer") { // If Episode
+        let title_no = split
+            .next()
+            .ok_or(UrlExtractError::InvalidUrl)?
+            .split(&['?', '&'][..])
+            .nth(1)
+            .ok_or(UrlExtractError::InvalidUrl)?
+            .strip_prefix("title_no=")
+            .ok_or(UrlExtractError::InvalidUrl)?
+            .parse()?;
 
-    let title_no: usize = split
-        .get(0)
-        .ok_or(UrlExtractError::InvalidUrl)?
-        .strip_prefix("list?title_no=")
-        .ok_or(UrlExtractError::InvalidUrl)?
-        .parse()?;
+        // Skip over `/episode-N/` part of the url
+        split.next();
 
-    let name = split.get(1).ok_or(UrlExtractError::InvalidUrl)?.to_string();
-    let genre = split.get(2).ok_or(UrlExtractError::InvalidUrl)?.to_string();
+        title_no
+    } else { // If List page
+        split
+            .next()
+            .ok_or(UrlExtractError::InvalidUrl)?
+            .strip_prefix("list?title_no=")
+            .ok_or(UrlExtractError::InvalidUrl)?
+            .parse()?
+    };
+
+    let name = split.next().ok_or(UrlExtractError::InvalidUrl)?.to_string();
+    let genre = split.next().ok_or(UrlExtractError::InvalidUrl)?.to_string();
 
     Ok(Webtoon {
         title_no,
@@ -61,6 +73,13 @@ mod tests {
     fn test_episode() {
         let url = "https://www.webtoons.com/en/slice-of-life/boyfriends/episode-78/viewer?title_no=2616&episode_no=78";
 
-        assert!(extract_url(url).is_err())
+        assert_eq!(
+            Webtoon {
+                title_no: 2616,
+                name: "boyfriends".to_string(),
+                genre: "slice-of-life".to_string(),
+            },
+            extract_url(url).unwrap()
+        );
     }
 }
